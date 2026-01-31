@@ -42,5 +42,10 @@ export const api = {
   async getLoads() {
     const response = await axios.get(`${BASE_URL}/loads`)
     return response.data
+  },
+
+  async simulateMovement() {
+    const response = await axios.post(`${BASE_URL}/simulate-movement`)
+    return response.data
   }
 }

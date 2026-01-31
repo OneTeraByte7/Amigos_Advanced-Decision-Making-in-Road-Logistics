@@ -62,6 +62,23 @@ export default function AgentControl({ onRefresh }: Props) {
         </p>
       </div>
 
+      {/* Quick Start Guide */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4">
+        <div className="flex items-start gap-3">
+          <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-bold text-sm">
+            ℹ
+          </div>
+          <div className="text-sm">
+            <p className="font-semibold text-blue-900 mb-2">Quick Start:</p>
+            <ol className="space-y-1 text-blue-800">
+              <li>1. Click <strong>"Initialize Fleet System"</strong> above if not done</li>
+              <li>2. Run <strong>Load Matcher</strong> to assign loads to vehicles</li>
+              <li>3. Watch trucks move automatically with live predictions</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
       {agents.map(agent => {
         const Icon = agent.icon
         const result = results[agent.id]
@@ -69,11 +86,23 @@ export default function AgentControl({ onRefresh }: Props) {
 
         return (
           <div key={agent.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className={`p-4 bg-${agent.color}-50 border-b border-${agent.color}-100`}>
+            <div className={`p-4 border-b ${
+              agent.color === 'blue' ? 'bg-blue-50 border-blue-100' :
+              agent.color === 'yellow' ? 'bg-yellow-50 border-yellow-100' :
+              'bg-green-50 border-green-100'
+            }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 bg-${agent.color}-100 rounded-lg`}>
-                    <Icon className={`w-6 h-6 text-${agent.color}-600`} />
+                  <div className={`p-2 rounded-lg ${
+                    agent.color === 'blue' ? 'bg-blue-100' :
+                    agent.color === 'yellow' ? 'bg-yellow-100' :
+                    'bg-green-100'
+                  }`}>
+                    <Icon className={`w-6 h-6 ${
+                      agent.color === 'blue' ? 'text-blue-600' :
+                      agent.color === 'yellow' ? 'text-yellow-600' :
+                      'text-green-600'
+                    }`} />
                   </div>
                   <div>
                     <h3 className="font-bold text-gray-800">{agent.name}</h3>
@@ -83,7 +112,11 @@ export default function AgentControl({ onRefresh }: Props) {
                 <button
                   onClick={() => runAgent(agent.id, agent.action)}
                   disabled={isLoading}
-                  className={`px-4 py-2 bg-gradient-to-r from-${agent.color}-600 to-${agent.color}-700 text-white rounded-lg font-medium hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
+                  className={`px-4 py-2 text-white rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
+                    agent.color === 'blue' ? 'bg-gradient-to-r from-blue-600 to-blue-700' :
+                    agent.color === 'yellow' ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
+                    'bg-gradient-to-r from-green-600 to-green-700'
+                  }`}
                 >
                   {isLoading ? (
                     <>
@@ -104,7 +137,7 @@ export default function AgentControl({ onRefresh }: Props) {
               <div className="p-4 bg-gray-50">
                 {result.error ? (
                   <div className="text-red-600 text-sm">
-                    <strong>Error:</strong> {result.error}
+                    <strong>Error:</strong> {result.error.includes('not initialized') ? 'Please initialize the system first' : result.error}
                   </div>
                 ) : (
                   <div className="space-y-2 text-sm">
@@ -112,11 +145,11 @@ export default function AgentControl({ onRefresh }: Props) {
                       <>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Vehicles Tracked:</span>
-                          <span className="font-semibold">{result.vehicles_tracked || 0}</span>
+                          <span className="font-semibold">{result.vehicles_count || 0}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Events Generated:</span>
-                          <span className="font-semibold">{result.events_generated || 0}</span>
+                          <span className="font-semibold">{result.events_count || 0}</span>
                         </div>
                       </>
                     )}

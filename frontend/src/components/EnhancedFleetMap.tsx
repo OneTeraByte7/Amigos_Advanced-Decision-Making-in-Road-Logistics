@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { MapContainer, TileLayer, Polyline } from 'react-leaflet'
 import { LatLng } from 'leaflet'
-import { FleetState, Load } from '../types'
-import LiveTruckMarker from './LiveTruckMarker'
-import LoadMarker from './LoadMarker'
+import { FleetState } from '../types'
+import ProfessionalTruckMarker from './ProfessionalTruckMarker'
+import ProfessionalLoadMarker from './ProfessionalLoadMarker'
 import 'leaflet/dist/leaflet.css'
 
 interface Props {
@@ -31,20 +31,41 @@ export default function EnhancedFleetMap({ fleetState }: Props) {
       center={center} 
       zoom={5} 
       className="h-full w-full rounded-xl shadow-2xl"
-      style={{ background: '#1a1a2e' }}
+      style={{ background: '#f8fafc' }}
+      zoomControl={true}
     >
+      {/* Light Map Style */}
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        attribution='&copy; <a href="https://carto.com/">CartoDB</a>'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
       
-      {/* Render active trip routes */}
+      {/* Render active trip routes - now follows real roads! */}
       {fleetState?.trips?.map(trip => {
         const vehicle = fleetState?.vehicles?.find(v => v.vehicle_id === trip.vehicle_id)
         const load = fleetState?.loads?.find(l => l.load_id === trip.load_id)
         if (!vehicle || !load || !load.origin?.lat || !load.destination?.lat) return null
 
-        // Draw route from current vehicle position to destination
+        // If trip has real route coordinates, use them!
+        if (trip.route_coordinates && trip.route_coordinates.length > 0) {
+          const routePositions: [number, number][] = trip.route_coordinates.map(coord => [coord[0], coord[1]])
+          
+          return (
+            <Polyline
+              key={trip.trip_id}
+              positions={routePositions}
+              pathOptions={{
+                color: '#0066ff',
+                weight: 4,
+                opacity: 0.7,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+            />
+          )
+        }
+
+        // Fallback to straight line if no route available
         const currentPos: [number, number] = [
           vehicle.current_location.lat, 
           vehicle.current_location.lng
@@ -60,27 +81,28 @@ export default function EnhancedFleetMap({ fleetState }: Props) {
             positions={[currentPos, destPos]}
             pathOptions={{
               color: '#10B981',
-              weight: 3,
-              opacity: 0.7,
+              weight: 4,
+              opacity: 0.8,
               dashArray: '10, 10',
+              lineCap: 'round',
             }}
           />
         )
       })}
 
-      {/* Render available loads */}
+      {/* Render available loads with professional markers */}
       {fleetState?.loads?.filter(l => l.status === 'available').map(load => (
-        <LoadMarker key={load.load_id} load={load} />
+        <ProfessionalLoadMarker key={load.load_id} load={load} />
       ))}
 
-      {/* Render live trucks with animation */}
+      {/* Render live trucks with professional animated markers */}
       {fleetState?.vehicles?.map(vehicle => {
         if (!vehicle.current_location?.lat || !vehicle.current_location?.lng) return null
         
         const previousPosition = vehiclePositions.get(vehicle.vehicle_id)
         
         return (
-          <LiveTruckMarker
+          <ProfessionalTruckMarker
             key={vehicle.vehicle_id}
             vehicle={vehicle}
             previousPosition={previousPosition}

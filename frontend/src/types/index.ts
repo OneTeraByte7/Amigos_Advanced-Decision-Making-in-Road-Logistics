@@ -47,6 +47,8 @@ export interface Trip {
   fuel_cost: number
   net_profit: number
   started_at: number
+  route_coordinates?: Array<[number, number]>  // NEW: Real road route [(lat, lng), ...]
+  route_distance_km?: number  // NEW: Actual road distance
 }
 
 export interface Event {
