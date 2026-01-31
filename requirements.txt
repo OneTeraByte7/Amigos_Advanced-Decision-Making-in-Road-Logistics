@@ -24,3 +24,6 @@ pytest-asyncio>=0.23.0
 # API Framework
 fastapi>=0.115.0
 uvicorn>=0.30.0
+
+# HTTP Requests (for OSRM routing)
+requests>=2.31.0
