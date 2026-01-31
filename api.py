@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List
 from pydantic import BaseModel
 import time
+import uuid
 
 from agents.fleet_monitor import FleetMonitorAgent
 from agents.load_matcher import LoadMatcherAgent
@@ -101,7 +102,7 @@ async def root():
 
 
 @app.post("/api/initialize", response_model=InitializeResponse)
-async def initialize_fleet(request: InitializeRequest):
+async def initialize_fleet(request: InitializeRequest = InitializeRequest()):
     """
     Initialize the fleet monitoring system with vehicles and loads.
     
@@ -119,6 +120,48 @@ async def initialize_fleet(request: InitializeRequest):
             num_vehicles=request.num_vehicles,
             num_loads=request.num_loads
         )
+        
+        # Create initial events for system startup
+        initial_events = []
+        current_time = time.time()
+        
+        # Create events for each vehicle
+        for vehicle in monitor_agent.current_state.vehicles:
+            vehicle_event = Event(
+                event_id=f"evt_{uuid.uuid4().hex[:8]}",
+                event_type=EventType.VEHICLE_POSITION_UPDATE,
+                timestamp=current_time,
+                payload={
+                    "vehicle_id": vehicle.vehicle_id,
+                    "status": vehicle.status.value,
+                    "location": vehicle.current_location.name,
+                    "lat": vehicle.current_location.lat,
+                    "lng": vehicle.current_location.lng,
+                    "action": "system_initialized"
+                }
+            )
+            initial_events.append(vehicle_event)
+        
+        # Create events for each load
+        for load in monitor_agent.current_state.active_loads:
+            load_event = Event(
+                event_id=f"evt_{uuid.uuid4().hex[:8]}",
+                event_type=EventType.LOAD_POSTED,
+                timestamp=current_time,
+                payload={
+                    "load_id": load.load_id,
+                    "origin": load.origin.name,
+                    "destination": load.destination.name,
+                    "weight_tons": load.weight_tons,
+                    "revenue": load.total_offered_revenue,
+                    "action": "load_available"
+                }
+            )
+            initial_events.append(load_event)
+        
+        # Add events to fleet state
+        monitor_agent._state["recent_events"] = initial_events
+        monitor_agent._state["fleet_state"].recent_events = initial_events
         
         # Initialize matcher agent
         matcher_agent = LoadMatcherAgent()
@@ -148,7 +191,16 @@ async def get_fleet_state() -> FleetState:
             detail="Fleet monitoring system not initialized. Call /api/initialize first."
         )
     
-    return monitor_agent.current_state
+    # Get current state and transform for frontend
+    state = monitor_agent.current_state
+    
+    # Convert to dict and rename active_trips to trips for frontend compatibility
+    state_dict = state.model_dump()
+    state_dict['trips'] = state_dict.pop('active_trips', [])
+    state_dict['loads'] = state_dict.pop('active_loads', [])
+    state_dict['events'] = state_dict.pop('recent_events', [])
+    
+    return state_dict
 
 
 @app.post("/api/cycle", response_model=CycleResponse)
@@ -316,8 +368,20 @@ async def get_metrics():
     in_transit_loads = len([l for l in loads if l.status == LoadStatus.IN_TRANSIT])
     
     # Calculate average utilization
-    total_utilization = sum(v.utilization_rate for v in vehicles)
-    avg_utilization = total_utilization / len(vehicles) if vehicles else 0.0
+    # Use loaded_km vs total_km ratio for real utilization
+    total_utilization = 0
+    vehicles_with_km = 0
+    for v in vehicles:
+        if v.total_km_today > 0:
+            total_utilization += v.utilization_rate
+            vehicles_with_km += 1
+    
+    # If no vehicles have moved yet, calculate based on current load
+    if vehicles_with_km == 0:
+        total_utilization = sum(v.current_load_tons / v.capacity_tons for v in vehicles if v.capacity_tons > 0)
+        avg_utilization = (total_utilization / len(vehicles)) if vehicles else 0.0
+    else:
+        avg_utilization = (total_utilization / vehicles_with_km) if vehicles_with_km > 0 else 0.0
     
     # Calculate total km
     total_km = sum(v.total_km_today for v in vehicles)
@@ -485,6 +549,9 @@ async def simulate_truck_movement():
                 "timestamp": time.time()
             }
         
+        # Initialize events list for this simulation cycle
+        new_events = []
+        
         # Find vehicles that are en-route
         for vehicle in fleet_state.vehicles:
             if vehicle.status not in (VehicleStatus.EN_ROUTE_LOADED, VehicleStatus.EN_ROUTE_EMPTY):
@@ -525,17 +592,18 @@ async def simulate_truck_movement():
                 else:
                     print(f"⚠️ Route fetch failed for {vehicle.vehicle_id}, using straight line")
             
-            # Calculate movement (5% progress per update)
-            progress_increment = 5.0
+            # Calculate movement - MUCH SMOOTHER: 0.5% per update = ~10km on 2000km route
+            progress_increment = 0.5  # Changed from 5.0 to 0.5 for smoother animation
             new_progress = min(active_trip.progress_percent + progress_increment, 100.0)
             
             # Get new position using real route if available
             if active_trip.route_coordinates:
                 # Use real road route
-                new_lat, new_lng = osrm_client.get_point_at_progress(
+                point = osrm_client.get_point_at_progress(
                     active_trip.route_coordinates,
                     new_progress
                 )
+                new_lat, new_lng = point[0], point[1]
                 print(f"🚛 {vehicle.vehicle_id} moving along real roads: {new_progress:.0f}% complete")
             else:
                 # Fallback to linear interpolation
@@ -555,8 +623,46 @@ async def simulate_truck_movement():
                 name=f"En-route ({new_progress:.0f}%)"
             )
             
+            # Create POSITION UPDATE event
+            position_event = Event(
+                event_id=f"evt_{uuid.uuid4().hex[:8]}",
+                event_type=EventType.VEHICLE_POSITION_UPDATE,
+                timestamp=time.time(),
+                payload={
+                    "vehicle_id": vehicle.vehicle_id,
+                    "load_id": load.load_id,
+                    "lat": new_lat,
+                    "lng": new_lng,
+                    "progress": new_progress,
+                    "location_name": vehicle.current_location.name
+                }
+            )
+            new_events.append(position_event)
+            
             # Update trip progress
             active_trip.progress_percent = new_progress
+            
+            # Phase transition: If vehicle reached ~10% and still in EMPTY state, switch to LOADED (pickup complete)
+            if new_progress >= 10.0 and vehicle.status == VehicleStatus.EN_ROUTE_EMPTY:
+                vehicle.status = VehicleStatus.EN_ROUTE_LOADED
+                load.status = LoadStatus.IN_TRANSIT
+                active_trip.phase = TripPhase.LOADED_LEG
+                
+                # Create PICKUP event
+                pickup_event = Event(
+                    event_id=f"evt_{uuid.uuid4().hex[:8]}",
+                    event_type=EventType.LOAD_MATCHED,
+                    timestamp=time.time(),
+                    payload={
+                        "vehicle_id": vehicle.vehicle_id,
+                        "load_id": load.load_id,
+                        "action": "pickup_complete",
+                        "location": load.origin.name,
+                        "weight_tons": load.weight_tons
+                    }
+                )
+                new_events.append(pickup_event)
+                print(f"📦 {vehicle.vehicle_id} completed pickup at {load.origin.name}")
             
             # Calculate ETA and predictions
             remaining_distance = load.distance_km * (100 - new_progress) / 100
@@ -620,11 +726,30 @@ async def simulate_truck_movement():
                 vehicle.status = VehicleStatus.AT_DELIVERY
                 load.status = LoadStatus.DELIVERED
                 active_trip.phase = TripPhase.COMPLETED
+                
+                # Create DELIVERY event
+                delivery_event = Event(
+                    event_id=f"evt_{uuid.uuid4().hex[:8]}",
+                    event_type=EventType.LOAD_DELIVERED,
+                    timestamp=time.time(),
+                    payload={
+                        "vehicle_id": vehicle.vehicle_id,
+                        "load_id": load.load_id,
+                        "delivery_location": load.destination.name,
+                        "total_distance": load.distance_km,
+                        "revenue": load.total_offered_revenue
+                    }
+                )
+                new_events.append(delivery_event)
             
             predictions.append(prediction)
         
+        # Add new events to fleet state
+        fleet_state.recent_events = (new_events + fleet_state.recent_events)[:100]  # Keep last 100 events
+        
         # Update the monitor agent state
         monitor_agent._state["fleet_state"] = fleet_state
+        monitor_agent._state["recent_events"] = fleet_state.recent_events
         
         return {
             "message": "Movement simulation completed",
