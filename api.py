@@ -19,14 +19,16 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List
 from pydantic import BaseModel
+import time
 
 from agents.fleet_monitor import FleetMonitorAgent
 from agents.load_matcher import LoadMatcherAgent
 from agents.route_manager import RouteManagerAgent
 from core.models import (
     FleetState, Vehicle, Load, Event, 
-    VehicleStatus, LoadStatus, EventType
+    VehicleStatus, LoadStatus, EventType, TripPhase
 )
+from utils.osrm_client import osrm_client
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -454,6 +456,189 @@ async def manage_active_routes():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Route management failed: {str(e)}")
+
+
+@app.post("/api/simulate-movement")
+async def simulate_truck_movement():
+    """
+    Simulate realistic truck movement along active routes.
+    Updates vehicle positions incrementally toward destinations.
+    """
+    if monitor_agent is None:
+        raise HTTPException(
+            status_code=400,
+            detail="System not initialized. Call /api/initialize first."
+        )
+    
+    try:
+        fleet_state = monitor_agent.current_state
+        updated_vehicles = []
+        predictions = []
+        
+        # Check if there are any active trips
+        if not fleet_state.active_trips:
+            return {
+                "message": "No active trips to simulate",
+                "vehicles_updated": 0,
+                "vehicle_ids": [],
+                "predictions": [],
+                "timestamp": time.time()
+            }
+        
+        # Find vehicles that are en-route
+        for vehicle in fleet_state.vehicles:
+            if vehicle.status not in (VehicleStatus.EN_ROUTE_LOADED, VehicleStatus.EN_ROUTE_EMPTY):
+                continue
+                
+            # Find associated trip
+            active_trip = None
+            for trip in fleet_state.active_trips:
+                if trip.vehicle_id == vehicle.vehicle_id:
+                    active_trip = trip
+                    break
+            
+            if not active_trip:
+                continue
+            
+            # Find the load to get destination
+            load = None
+            for l in fleet_state.active_loads:
+                if l.load_id == active_trip.load_id:
+                    load = l
+                    break
+            
+            if not load:
+                continue
+            
+            # Fetch real road route if not already cached
+            if active_trip.route_coordinates is None:
+                print(f"🗺️ Fetching real road route for {vehicle.vehicle_id}...")
+                route_info = osrm_client.get_route(
+                    load.origin.lat, load.origin.lng,
+                    load.destination.lat, load.destination.lng
+                )
+                
+                if route_info:
+                    active_trip.route_coordinates = route_info.coordinates
+                    active_trip.route_distance_km = route_info.distance_km
+                    print(f"✅ Fetched real route: {len(route_info.coordinates)} points, {route_info.distance_km:.1f}km")
+                else:
+                    print(f"⚠️ Route fetch failed for {vehicle.vehicle_id}, using straight line")
+            
+            # Calculate movement (5% progress per update)
+            progress_increment = 5.0
+            new_progress = min(active_trip.progress_percent + progress_increment, 100.0)
+            
+            # Get new position using real route if available
+            if active_trip.route_coordinates:
+                # Use real road route
+                new_lat, new_lng = osrm_client.get_point_at_progress(
+                    active_trip.route_coordinates,
+                    new_progress
+                )
+                print(f"🚛 {vehicle.vehicle_id} moving along real roads: {new_progress:.0f}% complete")
+            else:
+                # Fallback to linear interpolation
+                current_lat = vehicle.current_location.lat
+                current_lng = vehicle.current_location.lng
+                dest_lat = load.destination.lat
+                dest_lng = load.destination.lng
+                new_lat = current_lat + (dest_lat - current_lat) * (progress_increment / 100.0)
+                new_lng = current_lng + (dest_lng - current_lng) * (progress_increment / 100.0)
+                print(f"⚠️ {vehicle.vehicle_id} using straight-line fallback")
+            
+            # Update vehicle position
+            from core.models import Location
+            vehicle.current_location = Location(
+                lat=new_lat,
+                lng=new_lng,
+                name=f"En-route ({new_progress:.0f}%)"
+            )
+            
+            # Update trip progress
+            active_trip.progress_percent = new_progress
+            
+            # Calculate ETA and predictions
+            remaining_distance = load.distance_km * (100 - new_progress) / 100
+            avg_speed_kmh = 60.0  # Average speed
+            eta_hours = remaining_distance / avg_speed_kmh if remaining_distance > 0 else 0
+            eta_timestamp = time.time() + (eta_hours * 3600)
+            
+            # Update vehicle metrics
+            distance_covered = load.distance_km * (progress_increment / 100.0)
+            vehicle.total_km_today += distance_covered
+            if vehicle.status == VehicleStatus.EN_ROUTE_LOADED:
+                vehicle.loaded_km_today += distance_covered
+            
+            # Fuel consumption (rough estimate: 0.3L per km)
+            fuel_consumed = (distance_covered * 0.3 / 400) * 100  # 400L tank
+            vehicle.fuel_level_percent = max(0, vehicle.fuel_level_percent - fuel_consumed)
+            
+            # Driving hours
+            time_hours = distance_covered / avg_speed_kmh if avg_speed_kmh > 0 else 0
+            vehicle.max_driving_hours_remaining -= time_hours
+            
+            updated_vehicles.append(vehicle.vehicle_id)
+            
+            # Generate prediction
+            prediction = {
+                "vehicle_id": vehicle.vehicle_id,
+                "load_id": load.load_id,
+                "current_progress": new_progress,
+                "remaining_distance_km": remaining_distance,
+                "eta_hours": round(eta_hours, 2),
+                "eta_timestamp": eta_timestamp,
+                "current_speed_kmh": avg_speed_kmh,
+                "fuel_remaining": round(vehicle.fuel_level_percent, 1),
+                "estimated_fuel_cost": round(remaining_distance * 0.3 * 1.5, 2),  # $1.5 per liter
+                "on_time_status": "on-time",  # Simplified for now
+                "recommendations": []
+            }
+            
+            # Add recommendations
+            if vehicle.fuel_level_percent < 20:
+                prediction["recommendations"].append({
+                    "type": "fuel",
+                    "priority": "high",
+                    "message": "Low fuel! Plan refueling stop."
+                })
+            
+            if vehicle.max_driving_hours_remaining < 2:
+                prediction["recommendations"].append({
+                    "type": "rest",
+                    "priority": "high",
+                    "message": "Driver needs rest break soon."
+                })
+            
+            if new_progress >= 100:
+                prediction["recommendations"].append({
+                    "type": "delivery",
+                    "priority": "normal",
+                    "message": "Arriving at destination!"
+                })
+                # Mark as delivered
+                vehicle.status = VehicleStatus.AT_DELIVERY
+                load.status = LoadStatus.DELIVERED
+                active_trip.phase = TripPhase.COMPLETED
+            
+            predictions.append(prediction)
+        
+        # Update the monitor agent state
+        monitor_agent._state["fleet_state"] = fleet_state
+        
+        return {
+            "message": "Movement simulation completed",
+            "vehicles_updated": len(updated_vehicles),
+            "vehicle_ids": updated_vehicles,
+            "predictions": predictions,
+            "timestamp": time.time()
+        }
+        
+    except Exception as e:
+        import traceback
+        error_detail = f"Simulation failed: {str(e)}\n{traceback.format_exc()}"
+        print(error_detail)  # Log to console
+        raise HTTPException(status_code=500, detail=error_detail)
 
 
 # ─────────────────────────────────────
