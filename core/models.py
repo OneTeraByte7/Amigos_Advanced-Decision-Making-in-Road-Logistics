@@ -12,7 +12,7 @@ Design rules:
 """
 
 from enum import Enum
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from pydantic import BaseModel, Field
 import time
 
@@ -156,6 +156,10 @@ class Trip(BaseModel):
     estimated_profit: float = 0.0
     started_at: Optional[float] = None
     completed_at: Optional[float] = None
+    progress_percent: float = 0.0   
+    
+    route_coordinates: Optional[List[Tuple[float, float]]] = None
+    route_distance_km: Optional[float] = None# Track journey completion 0-100%
 
     @property
     def total_route_km(self) -> float:
