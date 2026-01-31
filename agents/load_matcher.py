@@ -189,58 +189,44 @@ CRITICAL RULES:
 - Consider driver constraints (hours remaining, fuel)
 """
     
-    # Format opportunities as a readable list
-    opportunities_text = "MATCHING OPPORTUNITIES:\n\n"
-    for i, opp in enumerate(opportunities, 1):
+    # Format opportunities as a readable list (limit to top 10 to avoid timeout)
+    # Sort by profit margin first
+    sorted_opps = sorted(opportunities, key=lambda x: x["metrics"]["profit_margin"], reverse=True)
+    top_opportunities = sorted_opps[:10]  # Only send top 10 to LLM
+    
+    opportunities_text = f"MATCHING OPPORTUNITIES (Top 10 of {len(opportunities)}):\n\n"
+    for i, opp in enumerate(top_opportunities, 1):
         m = opp["metrics"]
         opportunities_text += f"""
 Opportunity {i}:
-  Vehicle: {opp['vehicle_id']} (at {opp['vehicle_location']})
+  Vehicle: {opp['vehicle_id']} at {opp['vehicle_location']}
   Load: {opp['load_id']} ({opp['load_origin']} → {opp['load_destination']})
-  
-  Route:
-    - Pickup distance: {m['pickup_distance_km']} km (empty)
-    - Delivery distance: {m['delivery_distance_km']} km (loaded)
-    - Total: {m['total_distance_km']} km
-  
-  Economics:
-    - Revenue: ${m['revenue']}
-    - Cost: ${m['cost']}
-    - Profit: ${m['profit']}
-    - Profit margin: {m['profit_margin']:.1%}
-  
-  Efficiency:
-    - Utilization: {m['utilization']:.1%} (loaded/total km)
-    - Time: {m['time_hours']} hours
-  
-  Vehicle state:
-    - Fuel: {opp['vehicle_fuel']}%
-    - Hours remaining: {opp['vehicle_hours_remaining']}
-    - Load capacity: {opp['load_weight']} tons
-
+  Metrics: Profit ${m['profit']} ({m['profit_margin']:.0%}), Util {m['utilization']:.0%}, Distance {m['total_distance_km']}km
 ---
 """
     
     user_prompt = f"""{opportunities_text}
 
-Current fleet metrics:
-- Fleet size: {len(fleet_state.vehicles)} vehicles
-- Available: {len(fleet_state.available_vehicles)} vehicles
-- Active loads: {len(fleet_state.available_loads)} loads
+Fleet: {len(fleet_state.vehicles)} vehicles, {len(fleet_state.available_vehicles)} available
+Loads: {len(fleet_state.available_loads)} available
 
-TASK: Recommend which matches to approve.
+TASK: Select the BEST 3-5 matches from the opportunities above.
 
-Respond in this EXACT format:
+Rules:
+- Each vehicle can only match ONE load
+- Each load can only match ONE vehicle  
+- Prioritize profit margin > 12% and utilization > 85%
+
+Respond EXACTLY like this:
+
 APPROVED MATCHES:
-- Vehicle [vehicle_id] → Load [load_id]: [brief reason]
-- Vehicle [vehicle_id] → Load [load_id]: [brief reason]
+- Vehicle v1 → Load l3: [one sentence why]
+- Vehicle v2 → Load l5: [one sentence why]
 
 REASONING:
-[Explain your overall matching strategy and why you chose these specific matches]
+[2-3 sentences on strategy]
 
-If no good matches exist, say:
-APPROVED MATCHES: None
-REASONING: [explain why]
+If no good matches: say "APPROVED MATCHES: None" and explain why.
 """
     
     # Call LLM
@@ -280,10 +266,18 @@ def parse_llm_matches(state: MatcherState) -> MatcherState:
                 vehicle_part = parts[0]
                 load_part = parts[1].split(':')[0]  # Remove reason
                 
-                # Extract IDs
+                # Extract IDs - support both formats: truck_001, v1, vehicle_1, etc.
                 import re
-                vehicle_match = re.search(r'v\d+', vehicle_part)
-                load_match = re.search(r'l\d+', load_part)
+                # Try different ID patterns
+                vehicle_match = (
+                    re.search(r'truck_\d+', vehicle_part, re.IGNORECASE) or
+                    re.search(r'vehicle_\d+', vehicle_part, re.IGNORECASE) or
+                    re.search(r'v\d+', vehicle_part, re.IGNORECASE)
+                )
+                load_match = (
+                    re.search(r'load_\d+', load_part, re.IGNORECASE) or
+                    re.search(r'l\d+', load_part, re.IGNORECASE)
+                )
                 
                 if vehicle_match and load_match:
                     vehicle_id = vehicle_match.group()

@@ -25,6 +25,8 @@ def get_llm() -> ChatGroq:
         model_name=llm_settings.model,
         temperature=0.1,             # Low temp: we want deterministic reasoning, not creativity
         max_tokens=1024,
+        timeout=60,                  # 60 second timeout for complex prompts
+        max_retries=2                # Retry on failure
     )
 
 
@@ -35,10 +37,22 @@ def call_llm(system_prompt: str, user_prompt: str) -> str:
 
     This is the function every agent calls when it needs to reason.
     """
-    llm = get_llm()
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=user_prompt),
-    ]
-    response = llm.invoke(messages)
-    return response.content
+    try:
+        llm = get_llm()
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt),
+        ]
+        response = llm.invoke(messages)
+        return response.content
+    except Exception as e:
+        # Return detailed error for debugging
+        error_msg = str(e)
+        if "rate_limit" in error_msg.lower():
+            return f"LLM Error: Rate limit exceeded. Please wait a moment and try again."
+        elif "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
+            return f"LLM Error: Authentication failed. Check your GROQ_API_KEY in .env file."
+        elif "connection" in error_msg.lower() or "network" in error_msg.lower():
+            return f"LLM Error: Connection failed. Check your internet connection. Details: {error_msg}"
+        else:
+            return f"LLM Error: {error_msg}"
