@@ -182,13 +182,6 @@ SYSTEM CAPABILITIES:
 ✅ Explainable decision-making
 ✅ Multi-agent coordination
 
-This is a complete ADAPTIVE LOGISTICS platform that:
-- Observes continuously
-- Plans intelligently
-- Adapts dynamically
-- Explains decisions
-
-Perfect for the hackathon! 🏆
 """)
 
 print("="*80)
