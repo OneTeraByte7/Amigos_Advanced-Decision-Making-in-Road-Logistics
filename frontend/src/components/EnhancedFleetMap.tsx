@@ -46,9 +46,18 @@ export default function EnhancedFleetMap({ fleetState }: Props) {
         const load = fleetState?.loads?.find(l => l.load_id === trip.load_id)
         if (!vehicle || !load || !load.origin?.lat || !load.destination?.lat) return null
 
+        // DEBUG: Log route data
+        if (trip.route_coordinates) {
+          console.log(`✅ Trip ${trip.trip_id} has ${trip.route_coordinates.length} route points`)
+        } else {
+          console.log(`⚠️ Trip ${trip.trip_id} has NO route_coordinates`)
+        }
+
         // If trip has real route coordinates, use them!
         if (trip.route_coordinates && trip.route_coordinates.length > 0) {
           const routePositions: [number, number][] = trip.route_coordinates.map(coord => [coord[0], coord[1]])
+          
+          console.log(`🗺️ Rendering real route for ${trip.trip_id}:`, routePositions.slice(0, 3))
           
           return (
             <Polyline
@@ -66,6 +75,7 @@ export default function EnhancedFleetMap({ fleetState }: Props) {
         }
 
         // Fallback to straight line if no route available
+        console.log(`⚠️ Using straight line fallback for ${trip.trip_id}`)
         const currentPos: [number, number] = [
           vehicle.current_location.lat, 
           vehicle.current_location.lng
