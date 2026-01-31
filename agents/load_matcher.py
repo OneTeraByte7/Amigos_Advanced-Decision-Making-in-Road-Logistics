@@ -27,8 +27,8 @@ from langgraph.graph import StateGraph, END
 from typing_extensions import TypedDict
 
 from core.models import (
-    Vehicle, Load, Trip, FleetState,
-    VehicleStatus, LoadStatus, TripPhase
+    Vehicle, Load, Trip, FleetState, Event,
+    VehicleStatus, LoadStatus, TripPhase, EventType
 )
 from utils.llm_client import call_llm
 from config.settings import metric_targets
@@ -304,6 +304,7 @@ def create_trips(state: MatcherState) -> MatcherState:
     loads_by_id = {l.load_id: l for l in fleet_state.active_loads}
     
     new_trips = []
+    new_events = []
     
     for vehicle_id, load_id in approved_matches:
         if vehicle_id not in vehicles_by_id or load_id not in loads_by_id:
@@ -335,6 +336,39 @@ def create_trips(state: MatcherState) -> MatcherState:
         
         new_trips.append(trip)
         
+        # Create TRIP STARTED event
+        trip_event = Event(
+            event_id=f"evt_{uuid.uuid4().hex[:8]}",
+            event_type=EventType.TRIP_STARTED,
+            timestamp=time.time(),
+            vehicle_id=vehicle_id,
+            load_id=load_id,
+            data={
+                "trip_id": trip.trip_id,
+                "phase": TripPhase.PLANNING.value,
+                "pickup_location": load.origin.name,
+                "delivery_location": load.destination.name
+            }
+        )
+        new_events.append(trip_event)
+        
+        # Create LOAD MATCHED event
+        match_event = Event(
+            event_id=f"evt_{uuid.uuid4().hex[:8]}",
+            event_type=EventType.LOAD_MATCHED,
+            timestamp=time.time(),
+            vehicle_id=vehicle_id,
+            load_id=load_id,
+            data={
+                "origin": load.origin.name,
+                "destination": load.destination.name,
+                "revenue": metrics['revenue'],
+                "profit": metrics['profit'],
+                "distance_km": metrics['delivery_distance_km']
+            }
+        )
+        new_events.append(match_event)
+        
         # Update vehicle status
         vehicles_by_id[vehicle_id] = vehicle.model_copy(update={
             "status": VehicleStatus.EN_ROUTE_EMPTY,
@@ -351,6 +385,9 @@ def create_trips(state: MatcherState) -> MatcherState:
     fleet_state.active_trips.extend(new_trips)
     fleet_state.vehicles = list(vehicles_by_id.values())
     fleet_state.active_loads = list(loads_by_id.values())
+    
+    # Add events to fleet state
+    fleet_state.recent_events = (new_events + fleet_state.recent_events)[:100]
     
     return state
 
