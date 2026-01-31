@@ -143,9 +143,4 @@ print("""
 
 Your system is production-ready!
 
-Next steps:
-1. Open Thunder Client in VS Code
-2. Test endpoints manually
-3. Read DEMO_GUIDE_AI.md for presentation tips
-4. Win the hackathon! 🏆
 """)
