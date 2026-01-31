@@ -51,12 +51,15 @@ class TripPhase(str, Enum):
 class EventType(str, Enum):
     VEHICLE_POSITION_UPDATE = "vehicle_position_update"
     LOAD_POSTED = "load_posted"
+    LOAD_MATCHED = "load_matched"
     LOAD_CANCELLED = "load_cancelled"
+    LOAD_DELIVERED = "load_delivered"
     TRAFFIC_ALERT = "traffic_alert"
     FUEL_PRICE_CHANGE = "fuel_price_change"
     DELIVERY_DELAY = "delivery_delay"
     VEHICLE_IDLE_TIMEOUT = "vehicle_idle_timeout"
     TRIP_COMPLETED = "trip_completed"
+    TRIP_STARTED = "trip_started"
 
 
 # ─────────────────────────────────────
@@ -158,8 +161,8 @@ class Trip(BaseModel):
     completed_at: Optional[float] = None
     progress_percent: float = 0.0   
     
-    route_coordinates: Optional[List[Tuple[float, float]]] = None
-    route_distance_km: Optional[float] = None# Track journey completion 0-100%
+    route_coordinates: Optional[List[List[float]]] = None  # Changed from Tuple to List for JSON serialization
+    route_distance_km: Optional[float] = None
 
     @property
     def total_route_km(self) -> float:
