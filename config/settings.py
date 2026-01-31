@@ -17,7 +17,7 @@ load_dotenv()
 class LLMSettings(BaseModel):
     """Settings for the Groq LLM connection."""
     api_key: str = os.getenv("GROQ_API_KEY", "")
-    model: str = os.getenv("LLM_MODEL", "llama3-8b-instruct")
+    model: str = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
 
     @field_validator("api_key")
     @classmethod
