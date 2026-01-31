@@ -197,13 +197,11 @@ CRITICAL RULES:
     opportunities_text = f"MATCHING OPPORTUNITIES (Top 10 of {len(opportunities)}):\n\n"
     for i, opp in enumerate(top_opportunities, 1):
         m = opp["metrics"]
-        opportunities_text += f"""
-Opportunity {i}:
-  Vehicle: {opp['vehicle_id']} at {opp['vehicle_location']}
-  Load: {opp['load_id']} ({opp['load_origin']} → {opp['load_destination']})
-  Metrics: Profit ${m['profit']} ({m['profit_margin']:.0%}), Util {m['utilization']:.0%}, Distance {m['total_distance_km']}km
----
-"""
+        opportunities_text += f"Opportunity {i}:\n"
+        opportunities_text += f"  Vehicle: {opp['vehicle_id']} at {opp['vehicle_location']}\n"
+        opportunities_text += f"  Load: {opp['load_id']} ({opp['load_origin']} → {opp['load_destination']})\n"
+        opportunities_text += f"  Metrics: Profit ${m['profit']} ({m['profit_margin']:.0%}), Util {m['utilization']:.0%}, Distance {m['total_distance_km']}km\n"
+        opportunities_text += "---\n"
     
     user_prompt = f"""{opportunities_text}
 
