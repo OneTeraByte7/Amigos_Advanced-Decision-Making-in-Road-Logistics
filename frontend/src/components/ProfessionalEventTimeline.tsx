@@ -23,6 +23,13 @@ export default function ProfessionalEventTimeline({ events }: Props) {
     const interval = setInterval(fetchMetrics, 3000)
     return () => clearInterval(interval)
   }, [])
+  
+  // Sort events by timestamp (most recent first)
+  const sortedEvents = [...events].sort((a, b) => {
+    const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp * 1000
+    const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp * 1000
+    return timeB - timeA
+  })
   const getEventIcon = (eventType: string) => {
     switch (eventType) {
       case 'vehicle_position_update':
@@ -59,12 +66,6 @@ export default function ProfessionalEventTimeline({ events }: Props) {
     if (hours < 24) return `${hours}h ago`
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
-
-  const sortedEvents = [...events].sort((a, b) => {
-    const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp * 1000
-    const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp * 1000
-    return timeB - timeA
-  })
 
   const recentEvents = sortedEvents.slice(0, 20)
   const eventCounts = {

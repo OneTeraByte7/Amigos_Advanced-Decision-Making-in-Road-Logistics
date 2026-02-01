@@ -227,7 +227,7 @@ function App() {
                 <div>
                   <div className="text-xs text-gray-500">Efficiency</div>
                   <div className="text-sm font-bold text-gray-800">
-                    {metrics ? (metrics.avg_utilization ?? 0).toFixed(0) : 0}%
+                    {metrics?.avg_utilization ? metrics.avg_utilization.toFixed(0) : 0}%
                   </div>
                 </div>
               </div>
