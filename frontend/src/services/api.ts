@@ -1,7 +1,18 @@
 import axios from 'axios'
 import { FleetState, FleetMetrics, MatchingResult, RouteDecision } from '../types'
 
-const BASE_URL = '/api'
+interface ImportMetaEnv {
+  readonly VITE_API_BASE_URL?: string
+}
+
+declare global {
+  interface ImportMeta {
+    readonly env: ImportMetaEnv
+  }
+}
+
+// Use Vite environment variable when provided (set in Vercel or local .env)
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || '/api'
 
 export const api = {
   async initialize() {
