@@ -84,9 +84,9 @@ def calculate_trip_metrics(vehicle: Vehicle, load: Load) -> Dict:
     revenue = load.offered_rate_per_km * delivery_distance
     
     # Costs
-    fuel_cost = total_distance * 2.5  # $2.5 per km
+    fuel_cost = total_distance * 2.5  # rupees 2.5 per km
     time_hours = total_distance / 60  # Assuming 60 km/h average
-    driver_cost = time_hours * 15.0  # $15 per hour
+    driver_cost = time_hours * 15.0  # rupees 15 per hour
     total_cost = fuel_cost + driver_cost
     
     # Profit
@@ -200,7 +200,7 @@ CRITICAL RULES:
         opportunities_text += f"Opportunity {i}:\n"
         opportunities_text += f"  Vehicle: {opp['vehicle_id']} at {opp['vehicle_location']}\n"
         opportunities_text += f"  Load: {opp['load_id']} ({opp['load_origin']} → {opp['load_destination']})\n"
-        opportunities_text += f"  Metrics: Profit ${m['profit']} ({m['profit_margin']:.0%}), Util {m['utilization']:.0%}, Distance {m['total_distance_km']}km\n"
+        opportunities_text += f"  Metrics: Profit rupees {m['profit']} ({m['profit_margin']:.0%}), Util {m['utilization']:.0%}, Distance {m['total_distance_km']}km\n"
         opportunities_text += "---\n"
     
     user_prompt = f"""{opportunities_text}

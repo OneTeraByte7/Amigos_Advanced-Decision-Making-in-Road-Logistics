@@ -122,7 +122,7 @@ else:
                     print(f"\n      💡 Opportunities:")
                     for opp in decision['opportunities'][:2]:  # Show first 2
                         print(f"         • Load {opp['load_id']}: {opp['load_origin']} → {opp['load_destination']}")
-                        print(f"           Detour: {opp['detour_km']}km, Profit: ${opp['profit']}")
+                        print(f"           Detour: {opp['detour_km']}km, Profit: rupees {opp['profit']}")
                 
                 print(f"\n      🤖 LLM DECISION:")
                 print("         " + "-"*68)

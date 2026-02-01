@@ -58,9 +58,9 @@ if state['active_loads']:
     print(f"    Route: {l['origin']['name']} → {l['destination']['name']}")
     print(f"    Weight: {l['weight_tons']} tons")
     print(f"    Distance: {l['distance_km']} km")
-    print(f"    Rate: ${l['offered_rate_per_km']}/km")
+    print(f"    Rate: Rupees{l['offered_rate_per_km']}/km")
     revenue = l['offered_rate_per_km'] * l['distance_km']
-    print(f"    Total Revenue: ${revenue:.2f}")
+    print(f"    Total Revenue: Rupees{revenue:.2f}")
 
 # Test 4: AI Matching
 print_header("4. 🤖 RUNNING AI-POWERED LOAD MATCHING")
