@@ -42,27 +42,27 @@ export default function LoadMatchingPanel({ fleetState }: Props) {
         <h3 className="text-lg font-bold text-gray-800 mb-3">Available Loads</h3>
         <div className="space-y-3">
           {availableLoads.slice(0, 5).map(load => (
-            <div key={load.id} className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div key={load.load_id} className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="font-semibold text-gray-800 mb-2">{load.id}</div>
+                  <div className="font-semibold text-gray-800 mb-2">{load.load_id}</div>
                   <div className="space-y-1 text-sm text-gray-600">
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-gray-400" />
                       <span>{load.origin} â†’ {load.destination}</span>
                     </div>
                     <div className="flex gap-4">
-                      <span>Weight: {load.weight}t</span>
-                      <span>Distance: {load.distance.toFixed(0)}km</span>
+                      <span>Weight: {load.weight_tons}t</span>
+                      <span>Distance: {load.distance_km.toFixed(0)}km</span>
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-lg font-bold text-green-600">
-                    ${load.total_revenue.toFixed(0)}
+                    ${(load.offered_rate_per_km * load.distance_km).toFixed(0)}
                   </div>
                   <div className="text-xs text-gray-500">
-                    ${load.rate_per_km.toFixed(1)}/km
+                    ${load.offered_rate_per_km.toFixed(1)}/km
                   </div>
                 </div>
               </div>
@@ -75,9 +75,9 @@ export default function LoadMatchingPanel({ fleetState }: Props) {
         <h3 className="text-lg font-bold text-gray-800 mb-3">Recent Matches</h3>
         <div className="space-y-3">
           {matchedLoads.slice(0, 5).map(load => (
-            <div key={load.id} className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div key={load.load_id} className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-semibold text-gray-800">{load.id}</span>
+                <span className="font-semibold text-gray-800">{load.load_id}</span>
                 <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
                   Matched
                 </span>
@@ -85,7 +85,7 @@ export default function LoadMatchingPanel({ fleetState }: Props) {
               <div className="text-sm text-gray-600">
                 <div className="flex items-center gap-2">
                   <Truck className="w-4 h-4" />
-                  <span>{load.assigned_vehicle}</span>
+                  <span>{load.assigned_vehicle_id || 'Unassigned'}</span>
                 </div>
                 <div className="mt-1">
                   {load.origin} â†’ {load.destination}
