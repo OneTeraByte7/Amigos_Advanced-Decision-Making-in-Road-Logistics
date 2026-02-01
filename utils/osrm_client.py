@@ -35,7 +35,7 @@ class OSRMClient:
             }
             
             print(f"   📡 OSRM URL: {url}")
-            response = requests.get(url, params=params, timeout=15)
+            response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()
             
             data = response.json()
@@ -60,8 +60,14 @@ class OSRMClient:
                 duration_seconds=route['duration']
             )
             
+        except requests.exceptions.Timeout:
+            print(f"   ⏱️ OSRM request timed out - using fallback")
+            return None
+        except requests.exceptions.RequestException as e:
+            print(f"   ❌ OSRM network error: {str(e)[:100]}")
+            return None
         except Exception as e:
-            print(f"   ❌ OSRM routing error: {type(e).__name__}: {e}")
+            print(f"   ❌ OSRM error: {type(e).__name__}: {str(e)[:100]}")
             return None
     
     def get_point_at_progress(self, coordinates: List[List[float]], 

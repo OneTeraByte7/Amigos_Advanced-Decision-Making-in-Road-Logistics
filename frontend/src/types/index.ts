@@ -52,10 +52,12 @@ export interface Trip {
 }
 
 export interface Event {
-  timestamp: string
-  vehicle_id: string
+  event_id?: string
+  timestamp: string | number
+  vehicle_id?: string
   event_type: string
-  details: Record<string, any>
+  details?: Record<string, any>
+  payload?: Record<string, any>
 }
 
 export interface FleetState {
@@ -74,9 +76,12 @@ export interface FleetState {
 export interface FleetMetrics {
   total_vehicles: number
   available_vehicles: number
+  idle_vehicles?: number
+  en_route_vehicles?: number
   total_loads: number
   available_loads: number
   matched_loads: number
+  in_transit_loads?: number
   avg_utilization: number
   total_km_today: number
 }

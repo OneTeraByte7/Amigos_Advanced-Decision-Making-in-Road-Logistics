@@ -341,9 +341,9 @@ def create_trips(state: MatcherState) -> MatcherState:
             event_id=f"evt_{uuid.uuid4().hex[:8]}",
             event_type=EventType.TRIP_STARTED,
             timestamp=time.time(),
-            vehicle_id=vehicle_id,
-            load_id=load_id,
-            data={
+            payload={
+                "vehicle_id": vehicle_id,
+                "load_id": load_id,
                 "trip_id": trip.trip_id,
                 "phase": TripPhase.PLANNING.value,
                 "pickup_location": load.origin.name,
@@ -357,9 +357,9 @@ def create_trips(state: MatcherState) -> MatcherState:
             event_id=f"evt_{uuid.uuid4().hex[:8]}",
             event_type=EventType.LOAD_MATCHED,
             timestamp=time.time(),
-            vehicle_id=vehicle_id,
-            load_id=load_id,
-            data={
+            payload={
+                "vehicle_id": vehicle_id,
+                "load_id": load_id,
                 "origin": load.origin.name,
                 "destination": load.destination.name,
                 "revenue": metrics['revenue'],

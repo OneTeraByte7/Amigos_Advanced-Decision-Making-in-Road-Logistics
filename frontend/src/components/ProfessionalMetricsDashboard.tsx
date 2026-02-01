@@ -6,6 +6,9 @@ interface Props {
 }
 
 export default function ProfessionalMetricsDashboard({ metrics }: Props) {
+  
+  const utilization = metrics.avg_utilization ?? 0
+  
   const cards = [
     {
       title: 'Fleet Size',
@@ -33,14 +36,14 @@ export default function ProfessionalMetricsDashboard({ metrics }: Props) {
     },
     {
       title: 'Utilization',
-      value: metrics.avg_utilization ? metrics.avg_utilization.toFixed(1) : 0,
+      value: utilization ? utilization.toFixed(1) : 0,
       subtitle: 'Fleet average',
       icon: Gauge,
       color: 'purple',
       gradient: 'from-purple-500 via-purple-600 to-pink-600',
       bgGradient: 'from-purple-50 to-pink-50',
       shadowColor: 'shadow-purple-200',
-      change: (metrics.avg_utilization || 0) > 80 ? '+excellent' : null,
+      change: utilization > 80 ? '+excellent' : null,
       suffix: '%'
     },
     {
@@ -112,7 +115,7 @@ export default function ProfessionalMetricsDashboard({ metrics }: Props) {
                   <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                     <div 
                       className={`bg-gradient-to-r ${card.gradient} h-2 rounded-full transition-all duration-1000 ease-out`}
-                      style={{ width: `${card.value}%` }}
+                      style={{ width: `${Math.min(Number(card.value), 100)}%` }}
                     >
                       <div className="w-full h-full bg-white opacity-20 animate-pulse"></div>
                     </div>
