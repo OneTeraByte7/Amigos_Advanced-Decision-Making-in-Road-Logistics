@@ -198,7 +198,7 @@ function App() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-800">
-                  Adaptive Logistics
+                  Intelligent Logistics
                 </h1>
                 <p className="text-xs text-gray-500">Fleet Intelligence Platform</p>
               </div>

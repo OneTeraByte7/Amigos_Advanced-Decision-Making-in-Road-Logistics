@@ -24,6 +24,8 @@ export default function EnhancedDriverMobileView({ fleetState, driverId = 'drive
   const [showLoadDetails, setShowLoadDetails] = useState(false)
   const [recommendations, setRecommendations] = useState<AILoadRecommendation[]>([])
   const [metrics, setMetrics] = useState<any>(null)
+  const [llmParsing, setLlmParsing] = useState<boolean>(true)
+  const [dummyRequests, setDummyRequests] = useState<Array<any>>([])
 
   // Find driver's vehicle
   const myVehicle = fleetState?.vehicles?.find(v => v.driver_id === driverId)
@@ -54,6 +56,20 @@ export default function EnhancedDriverMobileView({ fleetState, driverId = 'drive
       setRecommendations(recs.sort((a, b) => b.score - a.score))
     }
   }, [availableLoads, myVehicle])
+
+  useEffect(() => {
+    // Simulate LLM parsing delay, then show 3 dummy driver requests
+    const timer = setTimeout(() => {
+      setLlmParsing(false)
+      setDummyRequests([
+        { id: 'DR-001', origin: 'Mumbai', destination: 'Pune', distance_km: 150, weight_tons: 6.0, rate: 15.0 },
+        { id: 'DR-002', origin: 'New Delhi', destination: 'Jaipur', distance_km: 280, weight_tons: 8.5, rate: 11.0 },
+        { id: 'DR-003', origin: 'Bengaluru', destination: 'Chennai', distance_km: 350, weight_tons: 3.5, rate: 14.0 }
+      ])
+    }, 1500)
+
+    return () => clearTimeout(timer)
+  }, [])
 
   const generateAIRecommendation = (load: Load, vehicle: Vehicle): AILoadRecommendation => {
     const revenue = load.offered_rate_per_km * load.distance_km
@@ -115,6 +131,16 @@ export default function EnhancedDriverMobileView({ fleetState, driverId = 'drive
     alert(`Load ${load.load_id} rejected.`)
     setShowLoadDetails(false)
     setSelectedLoad(null)
+  }
+
+  const handleAcceptDummy = (req: any) => {
+    alert(`Request ${req.id} accepted — awaiting dispatch.`)
+    setDummyRequests(prev => prev.filter(r => r.id !== req.id))
+  }
+
+  const handleRejectDummy = (req: any) => {
+    alert(`Request ${req.id} rejected.`)
+    setDummyRequests(prev => prev.filter(r => r.id !== req.id))
   }
 
   return (
@@ -262,11 +288,46 @@ export default function EnhancedDriverMobileView({ fleetState, driverId = 'drive
             </span>
           </div>
 
-          {availableLoads.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
-              <Package className="w-16 h-16 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-700 font-semibold text-lg mb-1">No loads available</p>
-              <p className="text-sm text-gray-500">Check back later for new opportunities</p>
+          {llmParsing ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center">
+              <Package className="w-12 h-12 text-blue-400 mx-auto mb-2 animate-pulse" />
+              <p className="text-gray-700 font-semibold text-lg mb-1">LLM parsing loads…</p>
+              <p className="text-sm text-gray-500">Analyzing best matches for your vehicle</p>
+            </div>
+          ) : dummyRequests.length > 0 ? (
+            <div className="space-y-3 pb-4">
+              {dummyRequests.map((d) => (
+                <div key={d.id} className="rounded-2xl shadow-sm border-2 border-gray-200 p-3 transition-all active:scale-[0.98]">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <div className="text-sm font-semibold">{d.origin} → {d.destination}</div>
+                      <div className="text-xs text-gray-500">Request {d.id}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold">{d.distance_km} km</div>
+                      <div className="text-xs text-gray-500">{d.weight_tons} t</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm text-gray-700">Rate</div>
+                    <div className="font-bold text-gray-900">${d.rate.toFixed(1)}/km</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => handleRejectDummy(d)}
+                      className="bg-gray-100 hover:bg-gray-200 text-gray-900 px-4 py-2 rounded-xl font-bold transition-colors"
+                    >
+                      Reject
+                    </button>
+                    <button
+                      onClick={() => handleAcceptDummy(d)}
+                      className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-xl font-bold shadow-md"
+                    >
+                      Accept
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="space-y-3 pb-4">
