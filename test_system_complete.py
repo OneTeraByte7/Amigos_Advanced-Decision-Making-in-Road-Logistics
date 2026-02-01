@@ -8,7 +8,7 @@ print("  🚀 ADAPTIVE LOGISTICS SYSTEM - COMPLETE TEST")
 print("="*80)
 print()
 
-API_BASE = "http://localhost:8000"
+API_BASE = "https://amigos-advanced-decision-making-in-road.onrender.com"
 
 def test_api_connection():
     """Test if API is running"""

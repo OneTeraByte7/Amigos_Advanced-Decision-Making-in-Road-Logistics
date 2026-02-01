@@ -6,7 +6,7 @@ import ProfessionalMetricsDashboard from './components/ProfessionalMetricsDashbo
 import ProfessionalEventTimeline from './components/ProfessionalEventTimeline'
 import ProfessionalLoadMatchingPanel from './components/ProfessionalLoadMatchingPanel'
 import LivePredictionPanel from './components/LivePredictionPanel'
-import DriverMobileView from './components/DriverMobileView'
+import EnhancedDriverMobileView from './components/EnhancedDriverMobileView'
 import { api } from './services/api'
 import { FleetState, FleetMetrics } from './types'
 
@@ -176,7 +176,7 @@ function App() {
   if (activeView === 'driver') {
     return (
       <div className="min-h-screen bg-gray-50">
-        <DriverMobileView 
+        <EnhancedDriverMobileView 
           fleetState={fleetState} 
           onBack={() => setActiveView('fleet')}
         />

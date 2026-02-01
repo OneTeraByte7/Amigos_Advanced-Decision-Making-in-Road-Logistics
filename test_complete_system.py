@@ -5,7 +5,7 @@ import requests
 import json
 import time
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "https://amigos-advanced-decision-making-in-road.onrender.com"
 
 def print_header(text):
     print("\n" + "="*80)

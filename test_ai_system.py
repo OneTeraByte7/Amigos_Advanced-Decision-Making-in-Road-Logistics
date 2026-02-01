@@ -4,7 +4,7 @@ Test the complete AI-powered system
 import requests
 import json
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "https://amigos-advanced-decision-making-in-road.onrender.com"
 
 def print_header(text):
     print("\n" + "="*70)
