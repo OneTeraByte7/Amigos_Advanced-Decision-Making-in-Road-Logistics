@@ -4,57 +4,52 @@ import { Icon, LatLng } from 'leaflet'
 import { Vehicle } from '../types'
 
 const createTruckIcon = (status: string, rotation: number = 0) => {
-  const color = status === 'idle' ? '#9CA3AF' : 
+  // Uber/Swiggy style 2D flat colors
+  const color = status === 'idle' ? '#6B7280' : 
                 status.includes('en_route_loaded') ? '#10B981' : 
                 status.includes('en_route_empty') ? '#3B82F6' : '#F59E0B'
   
-  const shadow = status === 'idle' ? 'rgba(156, 163, 175, 0.3)' :
-                 status.includes('en_route_loaded') ? 'rgba(16, 185, 129, 0.3)' :
-                 status.includes('en_route_empty') ? 'rgba(59, 130, 246, 0.3)' : 'rgba(245, 158, 11, 0.3)'
-  
   return new Icon({
     iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
         <defs>
-          <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="${shadow}" flood-opacity="0.5"/>
+          <filter id="shadow">
+            <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000000" flood-opacity="0.25"/>
           </filter>
-          <linearGradient id="truckGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:${color};stop-opacity:1" />
-            <stop offset="100%" style="stop-color:${color};stop-opacity:0.8" />
-          </linearGradient>
         </defs>
-        <g transform="rotate(${rotation} 24 24)" filter="url(#shadow)">
-          <!-- Truck Body -->
-          <rect x="8" y="16" width="20" height="14" rx="2" fill="url(#truckGrad)" stroke="white" stroke-width="1.5"/>
-          <!-- Cabin -->
-          <path d="M 8 16 L 8 12 C 8 11 9 10 10 10 L 18 10 C 19 10 20 11 20 12 L 20 16" fill="url(#truckGrad)" stroke="white" stroke-width="1.5"/>
-          <!-- Cargo Area -->
-          <rect x="28" y="20" width="10" height="10" rx="1" fill="url(#truckGrad)" stroke="white" stroke-width="1.5"/>
-          <!-- Connection -->
-          <rect x="20" y="23" width="8" height="4" fill="url(#truckGrad)"/>
-          <!-- Front Window -->
-          <rect x="10" y="12" width="8" height="4" rx="1" fill="rgba(255,255,255,0.3)" stroke="white" stroke-width="0.5"/>
-          <!-- Side Details -->
-          <line x1="10" y1="20" x2="26" y2="20" stroke="white" stroke-width="1" opacity="0.3"/>
-          <line x1="30" y1="24" x2="36" y2="24" stroke="white" stroke-width="1" opacity="0.3"/>
-          <!-- Wheels -->
-          <circle cx="14" cy="32" r="3" fill="#2D3748" stroke="white" stroke-width="1"/>
-          <circle cx="14" cy="32" r="1.5" fill="#4A5568"/>
-          <circle cx="24" cy="32" r="3" fill="#2D3748" stroke="white" stroke-width="1"/>
-          <circle cx="24" cy="32" r="1.5" fill="#4A5568"/>
-          <circle cx="34" cy="32" r="3" fill="#2D3748" stroke="white" stroke-width="1"/>
-          <circle cx="34" cy="32" r="1.5" fill="#4A5568"/>
-          <!-- Status Indicator -->
-          <circle cx="40" cy="12" r="4" fill="${color}" stroke="white" stroke-width="2">
-            ${status !== 'idle' ? '<animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>' : ''}
-          </circle>
+        
+        <!-- Outer circle background (white) -->
+        <circle cx="20" cy="20" r="18" fill="white" filter="url(#shadow)"/>
+        
+        <!-- Main truck body (rotated to show direction) -->
+        <g transform="rotate(${rotation} 20 20)">
+          <!-- Truck cab (front) -->
+          <rect x="14" y="8" width="12" height="8" rx="2" fill="${color}"/>
+          
+          <!-- Windshield -->
+          <rect x="16" y="10" width="8" height="3" rx="1" fill="rgba(255,255,255,0.4)"/>
+          
+          <!-- Cargo container (back) -->
+          <rect x="14" y="16" width="12" height="14" rx="1.5" fill="${color}"/>
+          
+          <!-- Side stripe detail -->
+          <rect x="15" y="20" width="10" height="1" rx="0.5" fill="rgba(255,255,255,0.3)"/>
+          
+          <!-- Direction indicator (front bumper) -->
+          <rect x="17" y="7" width="6" height="1.5" rx="0.5" fill="rgba(255,255,255,0.9)"/>
         </g>
+        
+        <!-- Status dot indicator -->
+        ${status !== 'idle' ? `
+          <circle cx="30" cy="10" r="4" fill="${color}">
+            <animate attributeName="opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite"/>
+          </circle>
+        ` : ''}
       </svg>
     `),
-    iconSize: [48, 48],
-    iconAnchor: [24, 24],
-    popupAnchor: [0, -24],
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -20],
   })
 }
 
@@ -80,7 +75,12 @@ export default function ProfessionalTruckMarker({ vehicle, previousPosition }: P
       setRotation(angle)
     }
 
-    setPosition(newPos)
+    // Smooth transition to new position
+    const timer = setTimeout(() => {
+      setPosition(newPos)
+    }, 100)
+    
+    return () => clearTimeout(timer)
   }, [vehicle.current_location, previousPosition])
 
   const getStatusInfo = () => {
