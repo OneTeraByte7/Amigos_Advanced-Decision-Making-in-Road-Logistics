@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 @dataclass
 class RouteInfo:
-    coordinates: List[Tuple[float, float]]  # [(lat, lng), ...]
+    coordinates: List[List[float]]  # Changed from Tuple to List: [[lat, lng], ...]
     distance_km: float
     duration_seconds: float
 
@@ -34,22 +34,25 @@ class OSRMClient:
                 'geometries': 'geojson'
             }
             
-            response = requests.get(url, params=params, timeout=5)
+            print(f"   📡 OSRM URL: {url}")
+            response = requests.get(url, params=params, timeout=15)
             response.raise_for_status()
             
             data = response.json()
             
             if not data.get('routes') or len(data['routes']) == 0:
-                print("No routes found")
+                print(f"   ⚠️ No routes found in OSRM response")
                 return None
             
             route = data['routes'][0]
             
-            # Convert [lng, lat] to (lat, lng) tuples
+            # Convert [lng, lat] to [lat, lng] lists (not tuples)
             coordinates = [
-                (coord[1], coord[0])  # Swap lng,lat to lat,lng
+                [coord[1], coord[0]]  # Swap lng,lat to lat,lng, return as list
                 for coord in route['geometry']['coordinates']
             ]
+            
+            print(f"   ✅ Route parsed: {len(coordinates)} coordinates")
             
             return RouteInfo(
                 coordinates=coordinates,
@@ -58,28 +61,48 @@ class OSRMClient:
             )
             
         except Exception as e:
-            print(f"OSRM routing error: {e}")
+            print(f"   ❌ OSRM routing error: {type(e).__name__}: {e}")
             return None
     
-    def get_point_at_progress(self, coordinates: List[Tuple[float, float]], 
-                             progress_percent: float) -> Tuple[float, float]:
+    def get_point_at_progress(self, coordinates: List[List[float]], 
+                             progress_percent: float) -> List[float]:
         """
-        Get lat/lng at specific progress along route
+        Get [lat, lng] at specific progress along route with interpolation
         
         Args:
-            coordinates: Full route coordinates
+            coordinates: Full route coordinates [[lat, lng], ...]
             progress_percent: 0-100
             
         Returns:
-            (lat, lng) at that progress point
+            [lat, lng] at that progress point (interpolated between points)
         """
         if not coordinates:
-            return (0.0, 0.0)
+            return [0.0, 0.0]
         
-        target_index = int((progress_percent / 100.0) * (len(coordinates) - 1))
-        target_index = max(0, min(target_index, len(coordinates) - 1))
+        if len(coordinates) == 1:
+            return coordinates[0]
         
-        return coordinates[target_index]
+        # Calculate exact position as float
+        exact_index = (progress_percent / 100.0) * (len(coordinates) - 1)
+        
+        # Get surrounding indices
+        lower_index = int(exact_index)
+        upper_index = min(lower_index + 1, len(coordinates) - 1)
+        
+        # If at the end, return last point
+        if lower_index >= len(coordinates) - 1:
+            return coordinates[-1]
+        
+        # Interpolate between the two points
+        fraction = exact_index - lower_index
+        
+        point1 = coordinates[lower_index]
+        point2 = coordinates[upper_index]
+        
+        interpolated_lat = point1[0] + (point2[0] - point1[0]) * fraction
+        interpolated_lng = point1[1] + (point2[1] - point1[1]) * fraction
+        
+        return [interpolated_lat, interpolated_lng]
 
 # Global instance
 osrm_client = OSRMClient()
