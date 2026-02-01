@@ -250,7 +250,7 @@ export default function DriverMobileView({ fleetState, driverId = 'driver_001', 
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-bold text-gray-800">{load.load_id}</span>
                             <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">
-                              ${load.total_offered_revenue.toFixed(0)}
+                              ${((load.offered_rate_per_km || 0) * (load.distance_km || 0)).toFixed(0)}
                             </span>
                           </div>
                           <div className={`text-xs font-medium ${recommendation.color}`}>
@@ -362,7 +362,7 @@ export default function DriverMobileView({ fleetState, driverId = 'driver_001', 
                 </div>
                 <div className="bg-green-50 p-4 rounded-xl">
                   <div className="text-xs text-green-600 mb-1">Revenue</div>
-                  <div className="font-bold text-green-700">${selectedLoad.total_offered_revenue.toFixed(0)}</div>
+                  <div className="font-bold text-green-700">${((selectedLoad.offered_rate_per_km || 0) * (selectedLoad.distance_km || 0)).toFixed(0)}</div>
                 </div>
                 <div className="bg-blue-50 p-4 rounded-xl">
                   <div className="text-xs text-blue-600 mb-1">Rate/km</div>

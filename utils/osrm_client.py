@@ -35,7 +35,7 @@ class OSRMClient:
             }
             
             print(f"   📡 OSRM URL: {url}")
-            response = requests.get(url, params=params, timeout=30)
+            response = requests.get(url, params=params, timeout=15)
             response.raise_for_status()
             
             data = response.json()

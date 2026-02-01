@@ -292,7 +292,15 @@ function App() {
         {activeTab === 'map' && (
           <div className="space-y-6">
             {/* Metrics Dashboard */}
-            {metrics && <ProfessionalMetricsDashboard metrics={metrics} />}
+            <ProfessionalMetricsDashboard metrics={metrics || {
+              total_vehicles: 0,
+              available_vehicles: 0,
+              total_loads: 0,
+              available_loads: 0,
+              matched_loads: 0,
+              avg_utilization: 0,
+              total_km_today: 0
+            }} />
 
             {/* Map and Controls Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -82,7 +82,7 @@ class MetricsResponse(BaseModel):
     available_loads: int
     matched_loads: int
     in_transit_loads: int
-    average_utilization: float
+    avg_utilization: float
     total_km_today: float
 
 
@@ -395,7 +395,7 @@ async def get_metrics():
         available_loads=available_loads,
         matched_loads=matched_loads,
         in_transit_loads=in_transit_loads,
-        average_utilization=avg_utilization,
+        avg_utilization=avg_utilization * 100.0,  # Convert to percentage
         total_km_today=total_km
     )
 
@@ -594,7 +594,8 @@ async def simulate_truck_movement():
             
             # Calculate movement - MUCH SMOOTHER: 0.5% per update = ~10km on 2000km route
             progress_increment = 0.5  # Changed from 5.0 to 0.5 for smoother animation
-            new_progress = min(active_trip.progress_percent + progress_increment, 100.0)
+            current_progress = getattr(active_trip, 'progress_percent', 0.0)
+            new_progress = min(current_progress + progress_increment, 100.0)
             
             # Get new position using real route if available
             if active_trip.route_coordinates:
@@ -639,7 +640,9 @@ async def simulate_truck_movement():
             )
             new_events.append(position_event)
             
-            # Update trip progress
+            # Update trip progress (ensure field exists)
+            if not hasattr(active_trip, 'progress_percent'):
+                active_trip.progress_percent = 0.0
             active_trip.progress_percent = new_progress
             
             # Phase transition: If vehicle reached ~10% and still in EMPTY state, switch to LOADED (pickup complete)

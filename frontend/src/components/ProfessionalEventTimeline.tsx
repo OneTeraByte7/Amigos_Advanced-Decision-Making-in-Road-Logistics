@@ -1,11 +1,28 @@
+import { useState, useEffect } from 'react'
 import { Activity, TrendingUp, Package, Truck, MapPin, AlertTriangle, CheckCircle, Clock, Zap } from 'lucide-react'
 import { Event } from '../types'
+import { api } from '../services/api'
 
 interface Props {
   events: Event[]
 }
 
 export default function ProfessionalEventTimeline({ events }: Props) {
+  const [metrics, setMetrics] = useState<any>(null)
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const data = await api.getMetrics()
+        setMetrics(data)
+      } catch (error) {
+        console.error('Failed to fetch metrics:', error)
+      }
+    }
+    fetchMetrics()
+    const interval = setInterval(fetchMetrics, 3000)
+    return () => clearInterval(interval)
+  }, [])
   const getEventIcon = (eventType: string) => {
     switch (eventType) {
       case 'vehicle_position_update':
