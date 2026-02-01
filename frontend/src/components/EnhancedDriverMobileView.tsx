@@ -241,7 +241,7 @@ export default function EnhancedDriverMobileView({ fleetState, driverId = 'drive
                 </div>
                 <div className="bg-white/10 rounded-lg p-2 backdrop-blur-sm">
                   <div className="text-xs opacity-80">Profit</div>
-                  <div className="font-bold text-sm">${myTrip.estimated_profit?.toFixed(0) || 0}</div>
+                    <div className="font-bold text-sm">${((myTrip.estimated_profit ?? 0)).toFixed(0)}</div>
                 </div>
               </div>
             </div>

@@ -55,9 +55,9 @@ export default function EventTimeline({ events }: Props) {
                 <div className="text-sm text-gray-600 capitalize">
                   {event.event_type.replace(/_/g, ' ')}
                 </div>
-                {Object.keys(event.details).length > 0 && (
+                {event.details && Object.keys(event.details).length > 0 && (
                   <div className="text-xs text-gray-500 mt-1">
-                    {Object.entries(event.details).slice(0, 2).map(([key, value]) => (
+                    {Object.entries(event.details ?? {}).slice(0, 2).map(([key, value]) => (
                       <div key={key}>
                         {key}: {typeof value === 'object' ? JSON.stringify(value) : String(value)}
                       </div>

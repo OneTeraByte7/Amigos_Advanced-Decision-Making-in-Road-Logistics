@@ -17,6 +17,9 @@ export interface Vehicle {
   idle_minutes_today: number
   max_driving_hours_remaining: number
   home_depot?: Location
+  // optional legacy/alias fields
+  id?: string
+  utilization_rate?: number
 }
 
 export interface Load {
@@ -32,6 +35,16 @@ export interface Load {
   pickup_window_end: number
   delivery_deadline: number
   created_at: number
+
+  // optional legacy/alias fields to support older components
+  id?: string
+  pickup_location?: Location
+  delivery_location?: Location
+  weight?: number
+  distance?: number
+  total_revenue?: number
+  rate_per_km?: number
+  assigned_vehicle?: any
 }
 
 export interface Trip {
@@ -46,6 +59,7 @@ export interface Trip {
   estimated_revenue: number
   fuel_cost: number
   net_profit: number
+  estimated_profit?: number
   started_at: number
   route_coordinates?: number[][]  // Changed to number[][] to match JSON: [[lat, lng], ...]
   route_distance_km?: number
