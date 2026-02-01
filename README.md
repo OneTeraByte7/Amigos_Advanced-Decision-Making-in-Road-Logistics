@@ -12,7 +12,7 @@ A research/demo repository for adaptive logistics, load matching, and route mana
 ## Deployed demo
 - 🚀 **Frontend (deployed):** https://amigos-advanced-decision-making-in.vercel.app/  
 - 🔗 **Backend API (deployed):** https://amigos-advanced-decision-making-in-road.onrender.com
-Replace the above URLs with your real deployment endpoints. If you provide the real links I can update them.
+
 
 ## Quickstart (Backend)
 - Prereqs: Python 3.8+ (3.10+ recommended), `pip`.
