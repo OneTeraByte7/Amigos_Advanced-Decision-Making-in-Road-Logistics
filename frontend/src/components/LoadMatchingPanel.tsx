@@ -8,7 +8,7 @@ interface Props {
 export default function LoadMatchingPanel({ fleetState }: Props) {
   const availableVehicles = fleetState?.vehicles?.filter(v => v.status === 'idle') || []
   const availableLoads = fleetState?.loads?.filter(l => l.status === 'available') || []
-  const matchedLoads = fleetState?.loads?.filter(l => l.status === 'matched' || l.assigned_vehicle_id) || []
+  const matchedLoads = fleetState?.loads?.filter(l => l.status === 'matched' || !!l.assigned_vehicle_id) || []
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-full">
@@ -49,20 +49,20 @@ export default function LoadMatchingPanel({ fleetState }: Props) {
                   <div className="space-y-1 text-sm text-gray-600">
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-gray-400" />
-                      <span>{load.origin} â†’ {load.destination}</span>
+                      <span>{load.origin?.name ?? `${load.origin?.lat ?? ''}, ${load.origin?.lng ?? ''}`} â†’ {load.destination?.name ?? `${load.destination?.lat ?? ''}, ${load.destination?.lng ?? ''}`}</span>
                     </div>
                     <div className="flex gap-4">
-                      <span>Weight: {load.weight_tons}t</span>
-                      <span>Distance: {load.distance_km.toFixed(0)}km</span>
+                      <span>Weight: {load.weight_tons ?? 0}t</span>
+                      <span>Distance: {(load.distance_km ?? 0).toFixed(0)}km</span>
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-lg font-bold text-green-600">
-                    ${(load.offered_rate_per_km * load.distance_km).toFixed(0)}
+                    ${(((load.offered_rate_per_km ?? 0) * (load.distance_km ?? 0)) ).toFixed(0)}
                   </div>
                   <div className="text-xs text-gray-500">
-                    ${load.offered_rate_per_km.toFixed(1)}/km
+                    ${((load.offered_rate_per_km ?? 0)).toFixed(1)}/km
                   </div>
                 </div>
               </div>
@@ -85,10 +85,10 @@ export default function LoadMatchingPanel({ fleetState }: Props) {
               <div className="text-sm text-gray-600">
                 <div className="flex items-center gap-2">
                   <Truck className="w-4 h-4" />
-                  <span>{load.assigned_vehicle_id || 'Unassigned'}</span>
+                  <span>{load.assigned_vehicle_id ?? 'Unassigned'}</span>
                 </div>
                 <div className="mt-1">
-                  {load.origin} â†’ {load.destination}
+                  {load.origin?.name ?? `${load.origin?.lat ?? ''}, ${load.origin?.lng ?? ''}`} â†’ {load.destination?.name ?? `${load.destination?.lat ?? ''}, ${load.destination?.lng ?? ''}`}
                 </div>
               </div>
             </div>

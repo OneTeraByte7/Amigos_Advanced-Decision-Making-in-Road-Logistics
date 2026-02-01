@@ -60,12 +60,12 @@ interface Props {
 
 export default function ProfessionalTruckMarker({ vehicle, previousPosition }: Props) {
   const [position, setPosition] = useState<LatLng>(
-    new LatLng(vehicle.current_location.lat, vehicle.current_location.lng)
+    new LatLng(vehicle.current_location?.lat ?? 0, vehicle.current_location?.lng ?? 0)
   )
   const [rotation, setRotation] = useState(0)
 
   useEffect(() => {
-    const newPos = new LatLng(vehicle.current_location.lat, vehicle.current_location.lng)
+    const newPos = new LatLng(vehicle.current_location?.lat ?? 0, vehicle.current_location?.lng ?? 0)
     
     if (previousPosition && !previousPosition.equals(newPos)) {
       const angle = Math.atan2(
@@ -101,7 +101,7 @@ export default function ProfessionalTruckMarker({ vehicle, previousPosition }: P
   }
 
   const statusInfo = getStatusInfo()
-  const utilizationPercent = (vehicle.current_load_tons / vehicle.capacity_tons) * 100
+  const utilizationPercent = ((vehicle.current_load_tons ?? 0) / (vehicle.capacity_tons || 1)) * 100
 
   return (
     <Marker 
@@ -134,7 +134,7 @@ export default function ProfessionalTruckMarker({ vehicle, previousPosition }: P
               <span className="text-blue-600 text-lg">📍</span>
               <div>
                 <div className="font-semibold text-gray-700">Current Location</div>
-                <div className="text-xs text-gray-600">{vehicle.current_location.name || 'Unknown'}</div>
+                <div className="text-xs text-gray-600">{vehicle.current_location?.name ?? 'Unknown'}</div>
               </div>
             </div>
           </div>
@@ -143,8 +143,8 @@ export default function ProfessionalTruckMarker({ vehicle, previousPosition }: P
           <div className="mb-3 p-3 bg-gray-50 rounded-lg">
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-semibold text-gray-700">Cargo Load</span>
-              <span className="text-sm font-bold text-blue-600">
-                {vehicle.current_load_tons.toFixed(1)} / {vehicle.capacity_tons.toFixed(1)} tons
+                <span className="text-sm font-bold text-blue-600">
+                {(vehicle.current_load_tons ?? 0).toFixed(1)} / {(vehicle.capacity_tons ?? 0).toFixed(1)} tons
               </span>
             </div>
             <div className="relative w-full bg-gray-200 rounded-full h-3 overflow-hidden">
@@ -167,8 +167,8 @@ export default function ProfessionalTruckMarker({ vehicle, previousPosition }: P
                 <span className="text-lg">⛽</span>
                 <span className="text-xs text-gray-600">Fuel Level</span>
               </div>
-              <div className={`text-xl font-bold ${vehicle.fuel_level_percent < 20 ? 'text-red-600' : 'text-orange-600'}`}>
-                {vehicle.fuel_level_percent.toFixed(0)}%
+                <div className={`text-xl font-bold ${((vehicle.fuel_level_percent ?? 0) < 20) ? 'text-red-600' : 'text-orange-600'}`}>
+                {(vehicle.fuel_level_percent ?? 0).toFixed(0)}%
               </div>
               {vehicle.fuel_level_percent < 20 && (
                 <div className="text-xs text-red-600 font-semibold mt-1">⚠️ Low Fuel</div>
@@ -181,10 +181,10 @@ export default function ProfessionalTruckMarker({ vehicle, previousPosition }: P
                 <span className="text-xs text-gray-600">Distance Today</span>
               </div>
               <div className="text-xl font-bold text-green-600">
-                {vehicle.total_km_today.toFixed(0)} km
+                {(vehicle.total_km_today ?? 0).toFixed(0)} km
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                {vehicle.loaded_km_today.toFixed(0)} km loaded
+                {(vehicle.loaded_km_today ?? 0).toFixed(0)} km loaded
               </div>
             </div>
 
@@ -193,8 +193,8 @@ export default function ProfessionalTruckMarker({ vehicle, previousPosition }: P
                 <span className="text-lg">⏰</span>
                 <span className="text-xs text-gray-600">Hours Left</span>
               </div>
-              <div className={`text-xl font-bold ${vehicle.max_driving_hours_remaining < 2 ? 'text-red-600' : 'text-purple-600'}`}>
-                {vehicle.max_driving_hours_remaining.toFixed(1)}h
+                <div className={`text-xl font-bold ${((vehicle.max_driving_hours_remaining ?? 0) < 2) ? 'text-red-600' : 'text-purple-600'}`}>
+                {(vehicle.max_driving_hours_remaining ?? 0).toFixed(1)}h
               </div>
               {vehicle.max_driving_hours_remaining < 2 && (
                 <div className="text-xs text-red-600 font-semibold mt-1">⚠️ Rest Soon</div>
@@ -206,8 +206,8 @@ export default function ProfessionalTruckMarker({ vehicle, previousPosition }: P
                 <span className="text-lg">📈</span>
                 <span className="text-xs text-gray-600">Efficiency</span>
               </div>
-              <div className="text-xl font-bold text-blue-600">
-                {vehicle.total_km_today > 0 ? ((vehicle.loaded_km_today / vehicle.total_km_today) * 100).toFixed(0) : '0'}%
+                <div className="text-xl font-bold text-blue-600">
+                {(vehicle.total_km_today ?? 0) > 0 ? (((vehicle.loaded_km_today ?? 0) / (vehicle.total_km_today ?? 1)) * 100).toFixed(0) : '0'}%
               </div>
               <div className="text-xs text-gray-500 mt-1">Utilization</div>
             </div>
@@ -216,7 +216,7 @@ export default function ProfessionalTruckMarker({ vehicle, previousPosition }: P
           {/* Home Depot Info */}
           {vehicle.home_depot && (
             <div className="p-2 bg-gray-100 rounded text-xs text-gray-600 text-center">
-              🏠 Home: {vehicle.home_depot.name}
+              🏠 Home: {vehicle.home_depot?.name ?? 'Depot'}
             </div>
           )}
         </div>
