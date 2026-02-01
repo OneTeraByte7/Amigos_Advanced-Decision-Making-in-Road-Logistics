@@ -207,7 +207,7 @@ export default function ProfessionalTruckMarker({ vehicle, previousPosition }: P
                 <span className="text-xs text-gray-600">Efficiency</span>
               </div>
               <div className="text-xl font-bold text-blue-600">
-                {(vehicle.utilization_rate * 100).toFixed(0)}%
+                {vehicle.total_km_today > 0 ? ((vehicle.loaded_km_today / vehicle.total_km_today) * 100).toFixed(0) : '0'}%
               </div>
               <div className="text-xs text-gray-500 mt-1">Utilization</div>
             </div>
