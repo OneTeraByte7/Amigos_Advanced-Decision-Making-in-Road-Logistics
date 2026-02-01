@@ -20,6 +20,8 @@ export interface Vehicle {
   // optional legacy/alias fields
   id?: string
   utilization_rate?: number
+  // allow access to legacy or backend-added fields
+  [key: string]: any
 }
 
 export interface Load {
@@ -45,6 +47,8 @@ export interface Load {
   total_revenue?: number
   rate_per_km?: number
   assigned_vehicle?: any
+  // allow access to legacy or backend-added fields
+  [key: string]: any
 }
 
 export interface Trip {
@@ -70,7 +74,7 @@ export interface Event {
   timestamp: string | number
   vehicle_id?: string
   event_type: string
-  details?: Record<string, any>
+  details: Record<string, any>
   payload?: Record<string, any>
 }
 
