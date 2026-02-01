@@ -112,7 +112,7 @@ function App() {
                 </div>
                 
                 <h1 className="text-5xl font-black tracking-tight text-white mb-4">
-                  ADAPTIVE LOGISTICS
+                  Intelligent Logistics
                 </h1>
                 
                 <p className="text-xl text-gray-300 font-light">
