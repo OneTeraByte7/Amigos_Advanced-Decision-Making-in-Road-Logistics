@@ -70,9 +70,3 @@ pytest -q
 - No explicit license file in repository. Add a `LICENSE` before reuse.
 
 ---
-
-If you'd like, I can:
-- 🔁 Update the deployed URLs with the real endpoints you provide.
-- 🧪 Run the test suite now.
-- 🐳 Add a `docker-compose.yml` or `Procfile` for easy local deployment.
-
