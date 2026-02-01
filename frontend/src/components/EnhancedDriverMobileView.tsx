@@ -310,7 +310,7 @@ export default function EnhancedDriverMobileView({ fleetState, driverId = 'drive
                   </div>
                   <div className="flex items-center justify-between mb-3">
                     <div className="text-sm text-gray-700">Rate</div>
-                    <div className="font-bold text-gray-900">${d.rate.toFixed(1)}/km</div>
+                    <div className="font-bold text-gray-900">Rupees {d.rate.toFixed(1)}/km</div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <button
