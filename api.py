@@ -30,6 +30,13 @@ from core.models import (
     VehicleStatus, LoadStatus, EventType, TripPhase
 )
 from utils.osrm_client import osrm_client
+from utils.analytics import FleetAnalytics, StatisticalAnalyzer
+from utils.ml_predictor import DeliveryTimePredictor, DemandForecaster, RouteOptimizer
+from utils.database import DatabaseManager
+from utils.report_generator import ReportGenerator
+from utils.cache_manager import route_cache, api_cache
+from utils.notification_system import notification_system, alert_monitor
+from utils.data_validator import VehicleValidator, LoadValidator, BusinessRuleValidator
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -51,6 +58,16 @@ app.add_middleware(
 monitor_agent: Optional[FleetMonitorAgent] = None
 matcher_agent: Optional[LoadMatcherAgent] = None
 route_manager_agent: Optional[RouteManagerAgent] = None
+
+# Global utility instances
+analytics_engine = FleetAnalytics()
+delivery_predictor = DeliveryTimePredictor()
+demand_forecaster = DemandForecaster()
+route_optimizer = RouteOptimizer()
+db_manager = DatabaseManager()
+report_generator = ReportGenerator()
+vehicle_validator = VehicleValidator()
+load_validator = LoadValidator()
 
 
 # ─────────────────────────────────────
@@ -767,6 +784,319 @@ async def simulate_truck_movement():
         error_detail = f"Simulation failed: {str(e)}\n{traceback.format_exc()}"
         print(error_detail)  # Log to console
         raise HTTPException(status_code=500, detail=error_detail)
+
+
+@app.get("/api/analytics/fleet-performance")
+async def get_fleet_analytics():
+    """
+    Get comprehensive fleet analytics and performance metrics.
+    
+    Returns detailed insights including:
+    - Top performing vehicles
+    - Route efficiency scores
+    - Profitability metrics
+    - Actionable recommendations
+    """
+    if monitor_agent is None:
+        raise HTTPException(status_code=400, detail="System not initialized")
+    
+    try:
+        fleet_state = monitor_agent.current_state
+        
+        # Generate analytics report
+        report = analytics_engine.analyze_fleet_performance(
+            vehicles=fleet_state.vehicles,
+            loads=fleet_state.active_loads,
+            trips=fleet_state.active_trips,
+            time_period_days=7
+        )
+        
+        return {
+            "report": {
+                "period_start": report.period_start.isoformat(),
+                "period_end": report.period_end.isoformat(),
+                "total_revenue": report.total_revenue,
+                "total_distance_km": report.total_distance_km,
+                "total_trips": report.total_trips,
+                "avg_utilization": report.avg_utilization * 100,
+                "avg_revenue_per_km": report.avg_revenue_per_km,
+                "route_efficiency_score": report.route_efficiency_score,
+                "fuel_efficiency_score": report.fuel_efficiency_score
+            },
+            "top_performers": report.top_performing_vehicles,
+            "recommendations": report.recommendations
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analytics failed: {str(e)}")
+
+
+@app.post("/api/ml/predict-delivery-time")
+async def predict_delivery_time(
+    distance_km: float,
+    traffic_factor: float = 1.0,
+    weather_score: float = 1.0,
+    time_of_day: int = 12,
+    vehicle_capacity: float = 25.0,
+    load_weight: float = 15.0
+):
+    """
+    Predict delivery time using machine learning.
+    
+    Query parameters:
+    - distance_km: Route distance
+    - traffic_factor: Traffic multiplier (1.0 = normal)
+    - weather_score: Weather impact (1.0 = normal)
+    - time_of_day: Hour of day (0-23)
+    - vehicle_capacity: Vehicle capacity in tons
+    - load_weight: Load weight in tons
+    """
+    try:
+        prediction = delivery_predictor.predict(
+            distance_km=distance_km,
+            traffic_factor=traffic_factor,
+            weather_score=weather_score,
+            time_of_day=time_of_day,
+            vehicle_capacity=vehicle_capacity,
+            load_weight=load_weight
+        )
+        
+        return {
+            "predicted_hours": round(prediction.predicted_value, 2),
+            "confidence": round(prediction.confidence * 100, 1),
+            "model_type": prediction.model_type,
+            "feature_importance": prediction.feature_importance
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+
+
+@app.get("/api/reports/executive-summary")
+async def get_executive_summary():
+    """
+    Generate executive summary report with key metrics and insights.
+    """
+    if monitor_agent is None:
+        raise HTTPException(status_code=400, detail="System not initialized")
+    
+    try:
+        fleet_state = monitor_agent.current_state
+        
+        fleet_data = {
+            'vehicles': [v.model_dump() for v in fleet_state.vehicles],
+            'loads': [l.model_dump() for l in fleet_state.active_loads],
+            'trips': [t.model_dump() for t in fleet_state.active_trips]
+        }
+        
+        summary = report_generator.generate_executive_summary(fleet_data)
+        
+        return summary
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Report generation failed: {str(e)}")
+
+
+@app.get("/api/reports/financial")
+async def get_financial_report():
+    """
+    Generate detailed financial performance report.
+    """
+    if monitor_agent is None:
+        raise HTTPException(status_code=400, detail="System not initialized")
+    
+    try:
+        fleet_state = monitor_agent.current_state
+        
+        vehicles = [v.model_dump() for v in fleet_state.vehicles]
+        loads = [l.model_dump() for l in fleet_state.active_loads]
+        
+        report = report_generator.generate_financial_report(loads, vehicles)
+        
+        return report
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Report generation failed: {str(e)}")
+
+
+@app.get("/api/cache/statistics")
+async def get_cache_statistics():
+    """
+    Get cache performance statistics.
+    """
+    return {
+        "route_cache": route_cache.cache.get_statistics(),
+        "api_cache": api_cache.cache.get_statistics()
+    }
+
+
+@app.post("/api/cache/clear")
+async def clear_cache(cache_type: str = Query("all", description="Cache type: route, api, or all")):
+    """
+    Clear cache entries.
+    """
+    if cache_type == "route" or cache_type == "all":
+        route_cache.cache.clear()
+    
+    if cache_type == "api" or cache_type == "all":
+        api_cache.cache.clear()
+    
+    return {"message": f"Cache cleared: {cache_type}"}
+
+
+@app.get("/api/notifications/active")
+async def get_active_notifications():
+    """
+    Get active (unacknowledged) notifications and alerts.
+    """
+    alerts = notification_system.get_active_alerts()
+    
+    return {
+        "count": len(alerts),
+        "alerts": [
+            {
+                "alert_id": alert.alert_id,
+                "type": alert.alert_type.value,
+                "level": alert.level.value,
+                "title": alert.title,
+                "message": alert.message,
+                "timestamp": alert.timestamp.isoformat(),
+                "vehicle_id": alert.vehicle_id,
+                "load_id": alert.load_id,
+                "metadata": alert.metadata
+            }
+            for alert in alerts
+        ]
+    }
+
+
+@app.post("/api/notifications/acknowledge/{alert_id}")
+async def acknowledge_alert(alert_id: str, acknowledged_by: str = "user"):
+    """
+    Acknowledge an alert.
+    """
+    success = notification_system.acknowledge_alert(alert_id, acknowledged_by)
+    
+    if success:
+        return {"message": "Alert acknowledged", "alert_id": alert_id}
+    else:
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+
+@app.get("/api/notifications/statistics")
+async def get_notification_statistics():
+    """
+    Get notification system statistics.
+    """
+    return notification_system.get_alert_statistics()
+
+
+@app.post("/api/monitoring/check-fleet")
+async def monitor_fleet_conditions():
+    """
+    Monitor fleet conditions and generate alerts for issues.
+    
+    Checks for:
+    - Low fuel levels
+    - Driver hours violations
+    - Maintenance due
+    - Delivery delays
+    - Unmatched loads
+    """
+    if monitor_agent is None:
+        raise HTTPException(status_code=400, detail="System not initialized")
+    
+    try:
+        fleet_state = monitor_agent.current_state
+        
+        fleet_data = {
+            'vehicles': [v.model_dump() for v in fleet_state.vehicles],
+            'loads': [l.model_dump() for l in fleet_state.active_loads],
+            'trips': [t.model_dump() for t in fleet_state.active_trips]
+        }
+        
+        # Run monitoring checks
+        alert_monitor.monitor_fleet(fleet_data)
+        
+        # Get generated alerts
+        new_alerts = notification_system.get_active_alerts()
+        
+        return {
+            "message": "Fleet monitoring completed",
+            "alerts_generated": len(new_alerts),
+            "alerts": [
+                {
+                    "type": alert.alert_type.value,
+                    "level": alert.level.value,
+                    "title": alert.title
+                }
+                for alert in new_alerts[:5]  # Return top 5
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Monitoring failed: {str(e)}")
+
+
+@app.post("/api/validation/vehicle")
+async def validate_vehicle_data(vehicle_data: Dict[str, Any]):
+    """
+    Validate vehicle data against business rules.
+    """
+    result = vehicle_validator.validate(vehicle_data)
+    
+    return {
+        "is_valid": result.is_valid,
+        "errors": result.errors,
+        "warnings": result.warnings,
+        "sanitized_data": result.sanitized_data
+    }
+
+
+@app.post("/api/validation/load")
+async def validate_load_data(load_data: Dict[str, Any]):
+    """
+    Validate load data against business rules.
+    """
+    result = load_validator.validate(load_data)
+    
+    return {
+        "is_valid": result.is_valid,
+        "errors": result.errors,
+        "warnings": result.warnings,
+        "sanitized_data": result.sanitized_data
+    }
+
+
+@app.get("/api/database/statistics")
+async def get_database_statistics():
+    """
+    Get database statistics.
+    """
+    try:
+        stats = db_manager.get_statistics()
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {str(e)}")
+
+
+@app.post("/api/analytics/profitability")
+async def calculate_profitability():
+    """
+    Calculate detailed profitability metrics for the fleet.
+    """
+    if monitor_agent is None:
+        raise HTTPException(status_code=400, detail="System not initialized")
+    
+    try:
+        fleet_state = monitor_agent.current_state
+        
+        metrics = analytics_engine.calculate_profitability_metrics(
+            vehicles=fleet_state.vehicles,
+            loads=fleet_state.active_loads
+        )
+        
+        return {
+            "profitability": metrics,
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Calculation failed: {str(e)}")
 
 
 # ─────────────────────────────────────
