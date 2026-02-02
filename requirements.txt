@@ -27,3 +27,6 @@ uvicorn>=0.30.0
 
 # HTTP Requests (for OSRM routing)
 requests>=2.31.0
+
+# Database ORM
+sqlalchemy>=2.0.0
