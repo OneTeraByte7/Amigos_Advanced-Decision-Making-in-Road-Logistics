@@ -1,4 +1,3 @@
-
 # 🚚 Amigos — Advanced Decision-Making in Road Logistics
 
 A research/demo repository for adaptive logistics, load matching, and route management. This project contains a **Python-dominant backend** with advanced analytics, ML predictions, and comprehensive monitoring, plus a Vite + React TypeScript frontend.
